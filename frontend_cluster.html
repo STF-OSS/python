@@ -1,0 +1,49 @@
+<!-- 数据分析部分 -->
+<div v-if="currentTab === 'analysis'" class="tab-content">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">数据分析</h5>
+            <div class="mb-3">
+                <label class="form-label">选择分析方法</label>
+                <select class="form-select" v-model="analysisType">
+                    <option value="kmeans">K-Means 聚类分析</option>
+                </select>
+            </div>
+            <div class="mb-3" v-if="analysisType === 'kmeans'">
+                <label class="form-label">选择聚类数量</label>
+                <select class="form-select" v-model="clusterCount">
+                    <option value="2">2个聚类</option>
+                    <option value="3">3个聚类</option>
+                    <option value="4">4个聚类</option>
+                    <option value="5">5个聚类</option>
+                    <option value="6">6个聚类</option>
+                    <option value="7">7个聚类</option>
+                    <option value="8">8个聚类</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">选择分析列（数值型，至少2列）</label>
+                <select class="form-select" v-model="selectedColumns" multiple>
+                    <option v-for="col in (previewData && previewData.numeric_columns ? previewData.numeric_columns : [])" :key="col" :value="col">{{ col }}</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" @click="performAnalysis" :disabled="!canPerformAnalysis || analysisLoading">
+                <span v-if="analysisLoading">分析中...</span>
+                <span v-else>开始分析</span>
+            </button>
+            <div v-if="analysisResult && !analysisLoading" class="mt-4">
+                <div class="alert alert-info">
+                    <h6>聚类分析结果</h6>
+                    <p>使用的聚类数量: {{ clusterCount }}</p>
+                </div>
+                <div class="chart-container">
+                    <img :src="analysisResult" alt="聚类分析结果图表" class="img-fluid border rounded shadow-sm">
+                </div>
+                <div v-if="analysisResponse && analysisResponse.cluster_explanation" class="mt-4 border p-3 rounded bg-light">
+                    <h6 class="mb-3">聚类分析解释</h6>
+                    <div class="analysis-explanation" v-html="formatMarkdown(analysisResponse.cluster_explanation)"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 
