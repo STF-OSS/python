@@ -1,0 +1,14 @@
+flask
+flask-cors
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+chardet
+flask-sqlalchemy
+pymysql
+openpyxl
+werkzeug 
+scipy
+kneed 
