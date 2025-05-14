@@ -1,1 +1,214 @@
+<<<<<<< HEAD
 
+=======
+<<<<<<< HEAD
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据分析系统 - 登录</title>
+    <style>
+        /* 使用CSS变量存储常用颜色和尺寸 */
+        :root {
+            --primary-color: #007BFF;
+            --secondary-color: #dc3545;
+            --bg-color: #f8f9fa;
+            --text-color: #343a40;
+            --input-border-color: #ced4da;
+            --input-bg-color: #fff;
+            --error-message-color: #dc3545;
+            --version-info-color: #6c757d;
+            --box-shadow-color: rgba(0, 0, 0, 0.1);
+            --btn-hover-color: #0056b3;
+            --focus-border-color: #007bff;
+            --background-img-url: url('https://ts1.tc.mm.bing.net/th/id/R-C.987f582c510be58755c4933cda68d525?rik=C0D21hJDYvXosw&riu=http%3a%2f%2fimg.pconline.com.cn%2fimages%2fupload%2fupc%2ftx%2fwallpaper%2f1305%2f16%2fc4%2f20990657_1368686545122.jpg&ehk=netN2qzcCVS4ALUQfDOwxAwFcy41oxC%2b0xTFvOYy5ds%3d&risl=&pid=ImgRaw&r=0');
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: var(--background-img-url) no-repeat center center fixed;
+            background-size: cover;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .login-container {
+            background-color: var(--input-bg-color);
+            border-radius: 10px;
+            box-shadow: 0 8px 20px var(--box-shadow-color);
+            padding: 40px 50px;
+            width: 400px;
+            animation: fadeInUp 0.5s ease-in-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-family: 'Arial', sans-serif;
+            font-size: 40px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            background: linear-gradient(to right, #007BFF, #0056b3);
+            /* 渐变背景 */
+            -webkit-background-clip: text;
+            /* 裁剪背景以适应文字 */
+            -webkit-text-fill-color: transparent;
+            /* 文字颜色透明 */
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 16px;
+            transition: color 0.3s ease;
+            font-family: 'Arial', sans-serif;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid var(--input-border-color);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--input-bg-color);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--focus-border-color);
+            box-shadow: 0 0 5px rgba(100, 100, 100, 0.2);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 15px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+            font-family: 'Arial', sans-serif;
+        }
+
+        button:hover {
+            background-color: var(--btn-hover-color);
+        }
+
+        .error-message {
+            color: var(--error-message-color);
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+            font-size: 14px;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .version-info {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--version-info-color);
+            font-family: 'Arial', sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <h1>数据分析系统</h1>
+        <form id="loginForm" autocomplete="off">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" class="form-control" placeholder="用户名" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit">登录</button>
+            <div class="error-message" id="errorMessage"></div>
+        </form>
+        <div class="version-info">
+            <p>数据分析系统 v1.0.0</p>
+            <p>© 2025 WUTpython数据分析团队</p>
+        </div>
+    </div>
+    <script>
+        // 监听登录表单的提交事件
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+            // 阻止表单的默认提交行为
+            e.preventDefault();
+
+            // 获取用户名和密码输入框的值
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // 发送登录请求到后端API
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        // 登录成功，保存令牌和用户信息到localStorage，并跳转到主页
+                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        window.location.href = '/dashboard';
+                    } else {
+                        // 登录失败，显示错误信息
+                        const errorMessage = document.getElementById('errorMessage');
+                        errorMessage.textContent = data.error || '登录失败，请检查用户名和密码。';
+                        errorMessage.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('登录请求出错:', error);
+                    const errorMessage = document.getElementById('errorMessage');
+                    errorMessage.textContent = '网络错误，请稍后重试。';
+                    errorMessage.style.display = 'block';
+                });
+        });
+    </script>
+</body>
+
+</html>
+=======
+
+>>>>>>> 83ceb43330edeb17409dac3b4f2fad64c0878c2a
+>>>>>>> c6fe356f (本地更改：同步前的自动提交)
