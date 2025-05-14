@@ -190,3 +190,57 @@ def upload_file(user_id, username, user_type):
         print(f"Upload error: {e}")
         import traceback; traceback.print_exc()
         return jsonify({'error': f'上传文件出错: {str(e)}'}), 500
+        
+@app.route('/export', methods=['POST'])
+@login_required
+def export_data(user_id, username, user_type):
+    data = request.json
+    filename = data.get('filename')
+    format_type = data.get('format', 'csv')
+    
+    global UPLOAD_FOLDER
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    
+    if filename.endswith('.csv'):
+        df = pd.read_csv(filepath)
+    else:
+        df = pd.read_excel(filepath)
+    
+    # 记录导出操作
+    log_user_action(username, user_id, "导出数据", 
+                   filename=filename, 
+                   details=f"导出格式: {format_type}, 行数: {len(df)}, 列数: {df.shape[1]}")
+    
+    if format_type == 'csv':
+        output = io.StringIO()
+        df.to_csv(output, index=False)
+        output.seek(0)
+        return send_file(
+            io.BytesIO(output.getvalue().encode()),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name='exported_data.csv'
+        )
+    elif format_type == 'excel':
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        output.seek(0)
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='exported_data.xlsx'
+        )
+    
+    return jsonify({'error': 'Invalid export format'}), 400
+
+if __name__ == '__main__':
+    try:
+        print("正在启动服务器...")
+        print("请访问: http://localhost:5000")
+        app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    except Exception as e:
+        print(f"服务器启动失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
