@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交互式数据分析系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .main-container {
+            padding: 20px;
+        }
+        .data-preview {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .chart-container {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+        .analysis-explanation h2, .analysis-explanation h3 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .analysis-explanation ul, .analysis-explanation ol {
+            padding-left: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="main-container">
+        <h1 class="text-center mb-4">交互式数据分析系统</h1>
+        
+        <!-- 导航栏 -->
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link" :class="{active: currentTab==='upload'}" href="#" @click="currentTab = 'upload'">数据上传</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" :class="{active: currentTab==='analysis', disabled: !hasData}" href="#" @click="hasData && (currentTab = 'analysis')">数据分析</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" :class="{active: currentTab==='visualization', disabled: !hasData}" href="#" @click="hasData && (currentTab = 'visualization')">数据可视化</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" :class="{active: currentTab==='export', disabled: !hasData}" href="#" @click="hasData && (currentTab = 'export')">数据导出</a>
+            </li>
+        </ul>
+
+        <!-- 数据上传部分 -->
+        <div v-if="currentTab === 'upload'" class="tab-content">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">上传数据文件</h5>
+                    <input type="file" class="form-control" @change="handleFileUpload" accept=".csv,.xlsx">
+                    <div v-if="previewData" class="mt-3">
+                        <h6>数据预览 (总计: {{previewData.total_rows}} 行 x {{previewData.total_columns}} 列)</h6>
+                        
+                        <!-- 分页控制 -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                    @click="currentPage = Math.max(0, currentPage - 1)" 
+                                    :disabled="currentPage === 0">
+                                    上一页
+                                </button>
+                                <span class="mx-2">第 {{currentPage + 1}} 页，共 {{Math.ceil((previewData.rows ? previewData.rows.length : 0) / itemsPerPage)}} 页</span>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                    @click="currentPage = Math.min(Math.ceil((previewData.rows ? previewData.rows.length : 0) / itemsPerPage) - 1, currentPage + 1)" 
+                                    :disabled="currentPage >= Math.ceil((previewData.rows ? previewData.rows.length : 0) / itemsPerPage) - 1">
+                                    下一页
+                                </button>
+                            </div>
+                            <div>
+                                <select v-model="itemsPerPage" class="form-select form-select-sm" style="width: auto;">
+                                    <option value="10">10条/页</option>
+                                    <option value="20">20条/页</option>
+                                    <option value="50">50条/页</option>
+                                    <option value="100">100条/页</option>
+                                    <option value="200">200条/页</option>
+                                    <option value="400">400条/页</option>
+                                    <option value="800">800条/页</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="data-preview">
+                            <table class="table table-striped table-bordered table-sm">
+                                <thead class="sticky-top bg-light">
+                                    <tr>
+                                        <th v-for="(col, colIndex) in (previewData && previewData.columns ? previewData.columns : [])" :key="colIndex" style="min-width: 100px;">
+                                            {{ col }}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(row, rowIdx) in paginatedRows" :key="rowIdx">
+                                        <td v-for="(cell, colIdx) in (row || [])" :key="colIdx">
+                                            {{ formatCell(cell) }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- 分页控制（底部） -->
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                    @click="currentPage = Math.max(0, currentPage - 1)" 
+                                    :disabled="currentPage === 0">
+                                    上一页
+                                </button>
+                                <span class="mx-2">第 {{currentPage + 1}} 页，共 {{Math.ceil((previewData.rows ? previewData.rows.length : 0) / itemsPerPage)}} 页</span>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                    @click="currentPage = Math.min(Math.ceil((previewData.rows ? previewData.rows.length : 0) / itemsPerPage) - 1, currentPage + 1)" 
+                                    :disabled="currentPage >= Math.ceil((previewData.rows ? previewData.rows.length : 0) / itemsPerPage) - 1">
+                                    下一页
+                                </button>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据分析部分 -->
+        <div v-if="currentTab === 'analysis'" class="tab-content">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">数据分析</h5>
+                    <div class="mb-3">
+                        <label class="form-label">选择分析方法</label>
+                        <select class="form-select" v-model="analysisType">
+                            <option value="kmeans">K-Means 聚类分析</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" v-if="analysisType === 'kmeans'">
+                        <label class="form-label">选择聚类数量</label>
+                        <select class="form-select" v-model="clusterCount">
+                            <option value="2">2个聚类</option>
+                            <option value="3">3个聚类</option>
+                            <option value="4">4个聚类</option>
+                            <option value="5">5个聚类</option>
+                            <option value="6">6个聚类</option>
+                            <option value="7">7个聚类</option>
+                            <option value="8">8个聚类</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">选择分析列（数值型，至少2列）</label>
+                        <select class="form-select" v-model="selectedColumns" multiple>
+                            <option v-for="col in (previewData && previewData.numeric_columns ? previewData.numeric_columns : [])" :key="col" :value="col">{{ col }}</option>
+                        </select>
+                        <small class="form-text text-muted">提示：按住Ctrl键可以多选</small>
+                    </div>
+                    
+                    <button class="btn btn-primary" @click="performAnalysis" :disabled="!canPerformAnalysis || analysisLoading">
+                        <span v-if="analysisLoading">
+                            分析中...
+                        </span>
+                        <span v-else>
+                            开始分析
+                        </span>
+                    </button>
+                    
+                    <div v-if="analysisLoading" class="mt-3">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <p class="text-center mt-2">正在进行聚类分析，请稍候...</p>
+                    </div>
+                    
+                    <div v-if="analysisResult && !analysisLoading" class="mt-4">
+                        <div class="alert alert-info">
+                            <h6>聚类分析结果</h6>
+                            <p>使用的聚类数量: {{ clusterCount }}</p>
+                            <p v-if="analysisResponse && analysisResponse.optimal_clusters">
+                                推荐的最佳聚类数: {{ analysisResponse.optimal_clusters }}
+                            </p>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <img :src="analysisResult" alt="聚类分析结果图表" class="img-fluid border rounded shadow-sm">
+                        </div>
+                        
+                        <div v-if="analysisResponse && analysisResponse.cluster_explanation" class="mt-4 border p-3 rounded bg-light">
+                            <h6 class="mb-3">聚类分析解释</h6>
+                            <div class="analysis-explanation" v-html="formatMarkdown(analysisResponse.cluster_explanation)"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据可视化部分 -->
+        <div v-if="currentTab === 'visualization'" class="tab-content">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">数据可视化</h5>
+                    <div class="mb-3">
+                        <label class="form-label">选择图表类型</label>
+                        <select class="form-select" v-model="visualizationType">
+                            <option value="bar">柱状图</option>
+                            <option value="pie">饼图</option>
+                            <option value="line">折线图</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">选择字段</label>
+                        <select class="form-select" v-model="visualizationColumn">
+                            <option v-for="col in (previewData && previewData.columns ? previewData.columns : [])" :key="col" :value="col">{{ col }}</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" @click="performVisualization">生成图表</button>
+                    <div v-if="visualizationResult" class="chart-container">
+                        <img :src="visualizationResult" alt="可视化图表" class="img-fluid">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据导出部分 -->
+        <div v-if="currentTab === 'export'" class="tab-content">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">导出数据</h5>
+                    <div class="mb-3">
+                        <label class="form-label">选择导出格式</label>
+                        <select class="form-select" v-model="exportFormat">
+                            <option value="csv">CSV</option>
+                            <option value="excel">Excel</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" @click="exportData">导出数据</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                currentTab: 'upload',
+                hasData: false,
+                previewData: {
+                    columns: [],
+                    rows: [],
+                    total_rows: 0,
+                    total_columns: 0,
+                    numeric_columns: []
+                },
+                analysisType: 'kmeans',
+                selectedColumns: [],
+                analysisResult: null,
+                exportFormat: 'csv',
+                currentFile: null,
+                visualizationType: 'bar',
+                visualizationColumn: '',
+                visualizationResult: null,
+                currentPage: 0,
+                itemsPerPage: 10,
+                clusterCount: 3,
+                analysisResponse: null,
+                analysisLoading: false
+            },
+            methods: {
+                handleFileUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    this.currentFile = file.name;
+
+                    // 重置分页
+                    this.currentPage = 0;
+
+                    axios.post('http://localhost:5000/upload', formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                            'Accept': 'application/json'
+                        }
+                    })
+                        .then(response => {
+                        console.log('Response received:', response);
+                        if (response.data && response.data.error) {
+                            alert('上传文件失败: ' + response.data.error);
+                            return;
+                        }
+                        
+                        // 确保数据结构完整
+                        const data = response.data || {};
+                        
+                        // 处理后端返回的数据
+                        this.previewData = {
+                            columns: data.columns || [],
+                            rows: data.rows || [],
+                            total_rows: data.total_rows || 0,
+                            total_columns: data.total_columns || 0,
+                            numeric_columns: []
+                        };
+                        
+                        // 计算数值型列，方便分析
+                        if (this.previewData.columns && this.previewData.columns.length && this.previewData.rows && this.previewData.rows.length) {
+                            // 检测每列的第一个非空值是否可能是数字
+                            for (let i = 0; i < this.previewData.columns.length; i++) {
+                                const col = this.previewData.columns[i];
+                                let isNumeric = false;
+                                
+                                // 检查前几行数据
+                                for (let j = 0; j < Math.min(5, this.previewData.rows.length); j++) {
+                                    const row = this.previewData.rows[j];
+                                    if (row && row[i] !== null && 
+                                        row[i] !== '' && 
+                                        !isNaN(Number(row[i]))) {
+                                        isNumeric = true;
+                                        break;
+                                    }
+                                }
+                                
+                                if (isNumeric) {
+                                    this.previewData.numeric_columns.push(col);
+                                }
+                            }
+                        }
+                        
+                        this.hasData = this.previewData.rows && this.previewData.rows.length > 0;
+                        console.log('Processed preview data:', this.previewData);
+                        })
+                        .catch(error => {
+                            console.error('Error uploading file:', error);
+                        let errorMsg = '上传文件失败';
+                        
+                        if (error.response && error.response.data && error.response.data.error) {
+                            errorMsg += ': ' + error.response.data.error;
+                        } else if (error.message) {
+                            errorMsg += ': ' + error.message;
+                        }
+                        
+                        alert(errorMsg);
+                        });
+                },
+                performAnalysis() {
+                    if (!this.selectedColumns.length) {
+                        alert('请选择至少两列数据进行分析');
+                        return;
+                    }
+                    
+                    // 添加加载状态
+                    this.analysisLoading = true;
+
+                    axios.post('http://localhost:5000/analyze', {
+                        filename: this.currentFile,
+                        analysis_type: this.analysisType,
+                        columns: this.selectedColumns,
+                        n_clusters: parseInt(this.clusterCount)
+                    })
+                    .then(response => {
+                        this.analysisLoading = false;
+                        console.log('Analysis response:', response.data);
+                        
+                        // 保存分析结果数据
+                        this.analysisResponse = response.data;
+                        
+                        // 设置图像URL
+                        if (response.data && response.data.image_url) {
+                            // 构建完整URL
+                            this.analysisResult = 'http://localhost:5000' + response.data.image_url;
+                        }
+                    })
+                    .catch(error => {
+                        this.analysisLoading = false;
+                        console.error('Error performing analysis:', error);
+                        let errorMsg = '分析失败';
+                        
+                        if (error.response && error.response.data && error.response.data.error) {
+                            errorMsg += ': ' + error.response.data.error;
+                        } else if (error.message) {
+                            errorMsg += ': ' + error.message;
+                        }
+                        
+                        alert(errorMsg);
+                    });
+                },
+                performVisualization() {
+                    if (!this.visualizationColumn) {
+                        alert('请选择字段');
+                        return;
+                    }
+                    axios.post('http://localhost:5000/visualize', {
+                        filename: this.currentFile,
+                        chart_type: this.visualizationType,
+                        column: this.visualizationColumn
+                    }, {
+                        responseType: 'blob'
+                    })
+                    .then(response => {
+                        const url = window.URL.createObjectURL(new Blob([response.data]));
+                        this.visualizationResult = url;
+                    })
+                    .catch(error => {
+                        console.error('Error visualizing data:', error);
+                        alert('可视化失败');
+                    });
+                },
+                exportData() {
+                    axios.post('http://localhost:5000/export', {
+                        filename: this.currentFile,
+                        format: this.exportFormat
+                    }, {
+                        responseType: 'blob'
+                    })
+                    .then(response => {
+                        const url = window.URL.createObjectURL(new Blob([response.data]));
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.setAttribute('download', `exported_data.${this.exportFormat}`);
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    })
+                    .catch(error => {
+                        console.error('Error exporting data:', error);
+                        alert('导出失败');
+                    });
+                },
+                formatValue(val) {
+                    if (val === undefined || val === null) {
+                        return '';
+                    }
+                    if (typeof val === 'number' && isNaN(val)) {
+                        return '';
+                    }
+                    if (typeof val === 'string' && val.length > 100) {
+                        return val.substring(0, 97) + '...';
+                    }
+                    return val;
+                },
+                formatCell(cell) {
+                    if (typeof cell === 'object' && cell !== null) {
+                        return JSON.stringify(cell);
+                    }
+                    return this.formatValue(cell);
+                },
+                formatMarkdown(markdown) {
+                    if (!markdown) return '';
+                    try {
+                        // 使用marked.js库将markdown转换为HTML
+                        return marked.parse(markdown);
+                    } catch (e) {
+                        console.error('Error parsing markdown:', e);
+                        return markdown;
+                    }
+                }
+            },
+            computed: {
+                numericColumns() {
+                    if (!this.previewData || !this.previewData.numeric_columns) return [];
+                    return this.previewData.columns.filter(col => this.previewData.numeric_columns.includes(col));
+                },
+                paginatedRows() {
+                    if (!this.previewData || !this.previewData.rows) return [];
+                    const start = this.currentPage * this.itemsPerPage;
+                    const end = start + this.itemsPerPage;
+                    return this.previewData.rows.slice(start, end);
+                },
+                canPerformAnalysis() {
+                    return this.selectedColumns.length >= 2 && this.clusterCount >= 2;
+                }
+            }
+        });
+    </script>
+   
+</body>
+</html> 

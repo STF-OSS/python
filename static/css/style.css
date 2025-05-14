@@ -1,0 +1,252 @@
+/* 全局样式 */
+:root {
+    --primary-color: #4a90e2;
+    --secondary-color: #f5f8fa;
+    --accent-color: #ff6b6b;
+    --text-color: #2c3e50;
+    --shadow-color: rgba(74, 144, 226, 0.1);
+}
+
+body {
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+    background: linear-gradient(135deg, #e0f7ff 0%, #f5f8fa 100%);
+    color: var(--text-color);
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* 背景装饰 */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('../images/anime-bg.png');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.1;
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* 半透明白色毛玻璃遮罩 */
+.bg-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(255,255,255,0.45);
+    backdrop-filter: blur(2px);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* 导航栏样式 */
+.navbar {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 15px var(--shadow-color);
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.navbar-brand {
+    color: var(--primary-color) !important;
+    font-weight: bold;
+    font-size: 1.5rem;
+    text-shadow: 1px 1px 2px var(--shadow-color);
+}
+
+.nav-link {
+    color: var(--text-color) !important;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--primary-color);
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+}
+
+.nav-link:hover::after {
+    width: 100%;
+}
+
+/* 卡片样式 */
+.card {
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px var(--shadow-color);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px var(--shadow-color);
+}
+
+.card-header {
+    background: var(--primary-color);
+    color: white;
+    border-bottom: none;
+    padding: 1rem;
+}
+
+/* 按钮样式 */
+.btn-primary {
+    background: var(--primary-color);
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: #357abd;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px var(--shadow-color);
+}
+
+/* 表单样式 */
+.form-control {
+    border: 2px solid #e1e8ed;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem var(--shadow-color);
+}
+
+/* 表格样式 */
+.table {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px var(--shadow-color);
+}
+
+.table thead th {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 1rem;
+}
+
+.table tbody tr:hover {
+    background: var(--secondary-color);
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--secondary-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #357abd;
+}
+
+/* 加载动画 */
+.loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading::after {
+    content: '';
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--secondary-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: loading 0.75s ease infinite;
+}
+
+@keyframes loading {
+    from {
+        transform: rotate(0turn);
+    }
+    to {
+        transform: rotate(1turn);
+    }
+}
+
+/* 二次元人物点缀 */
+.shinchan-corner {
+    position: fixed;
+    right: 2vw;
+    bottom: 0;
+    width: 180px;
+    z-index: 10;
+    pointer-events: none;
+    animation: floatAnime 3s ease-in-out infinite alternate;
+    opacity: 0.95;
+}
+.shinchan-corner.left {
+    left: 2vw;
+    right: auto;
+    width: 140px;
+    bottom: 10vh;
+    opacity: 0.88;
+}
+@keyframes floatAnime {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-18px); }
+} 

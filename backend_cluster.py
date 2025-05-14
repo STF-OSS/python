@@ -1,3 +1,13 @@
+from flask import Flask, jsonify
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+
+app = Flask(__name__)
+
+# 其它变量如 analysis_type、data、plot_cluster_analysis、wcss、silhouette_scores、df_for_plot、filename、feature_importance、optimal_clusters_elbow、optimal_clusters_silhouette、report
+# 需要你根据实际项目补充或 mock
+
 @app.route('/analyze', methods=['POST'])
 def analyze_data():
     # ... 省略其它代码 ...
