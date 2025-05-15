@@ -583,6 +583,133 @@ def visualize_data(user_id, username, user_type):
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/clean', methods=['POST'])
+def clean_data():
+    try:
+        data = request.json
+        filename = data.get('filename')
+        method = data.get('method', 'auto')  # 'drop', 'fill', 'auto'
+        fill_value = data.get('fill_value', 0)
+        detect_outliers = data.get('detect_outliers', True)
+        outlier_method = data.get('outlier_method', 'iqr')  # 'iqr', 'zscore'
+        columns_to_clean = data.get('columns', [])  # 要处理的列
+        
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        
+        # 读取文件
+        if filename.endswith('.csv'):
+            with open(filepath, 'rb') as f:
+                result = chardet.detect(f.read())
+            encoding = result['encoding'] if result['encoding'] else 'utf-8'
+            df = pd.read_csv(filepath, encoding=encoding)
+        else:
+            df = pd.read_excel(filepath)
+        
+        # 保存原始数据副本
+        original_df = df.copy()
+        
+        # 确定要处理的列
+        columns_to_process = columns_to_clean if columns_to_clean else df.columns.tolist()
+        
+        # 1. 缺失值处理
+        missing_stats_before = df[columns_to_process].isnull().sum().to_dict()
+        
+        if method == 'drop':
+            df = df.dropna(subset=columns_to_process)
+        elif method == 'fill':
+            for col in columns_to_process:
+                df[col] = df[col].fillna(fill_value)
+        elif method == 'auto':
+            numeric_cols = df.select_dtypes(include=['number']).columns
+            for col in columns_to_process:
+                if col in numeric_cols:
+                    df[col] = df[col].fillna(df[col].mean())
+                else:
+                    most_frequent = df[col].mode()[0] if not df[col].mode().empty else ""
+                    df[col] = df[col].fillna(most_frequent)
+        
+        missing_stats_after = df[columns_to_process].isnull().sum().to_dict()
+        
+        # 2. 异常值处理
+        outlier_stats = {}
+        if detect_outliers:
+            numeric_cols = df.select_dtypes(include=['number']).columns
+            cols_to_check = [col for col in numeric_cols if col in columns_to_process]
+            
+            for col in cols_to_check:
+                if len(df[col].dropna()) > 10:
+                    if outlier_method == 'iqr':
+                        # IQR方法
+                        Q1 = df[col].quantile(0.25)
+                        Q3 = df[col].quantile(0.75)
+                        IQR = Q3 - Q1
+                        lower_bound = Q1 - 1.5 * IQR
+                        upper_bound = Q3 + 1.5 * IQR
+                        
+                        outliers = df[(df[col] < lower_bound) | (df[col] > upper_bound)][col]
+                        
+                        if not outliers.empty:
+                            outlier_stats[col] = {
+                                'count': len(outliers),
+                                'percentage': len(outliers) / len(df) * 100,
+                                'lower_bound': float(lower_bound),
+                                'upper_bound': float(upper_bound)
+                            }
+                            
+                            # 处理异常值
+                            df[col] = df[col].clip(lower=lower_bound, upper=upper_bound)
+                    
+                    elif outlier_method == 'zscore':
+                        # Z-score方法
+                        zscore_threshold = 3
+                        zscores = abs((df[col] - df[col].mean()) / df[col].std())
+                        outliers = df[col][zscores > zscore_threshold]
+                        
+                        if not outliers.empty:
+                            outlier_stats[col] = {
+                                'count': len(outliers),
+                                'percentage': len(outliers) / len(df) * 100,
+                                'threshold': zscore_threshold
+                            }
+                            
+                            # 将异常值替换为均值
+                            df.loc[zscores > zscore_threshold, col] = df[col].mean()
+        
+        # 保存清洗后的数据
+        cleaned_filename = f'cleaned_{filename}'
+        cleaned_path = os.path.join(UPLOAD_FOLDER, cleaned_filename)
+        
+        if filename.endswith('.csv'):
+            df.to_csv(cleaned_path, index=False)
+        else:
+            df.to_excel(cleaned_path, index=False)
+        
+        # 生成报告
+        report = {
+            'missing_values': {
+                'before': missing_stats_before,
+                'after': missing_stats_after,
+                'removed_rows': len(original_df) - len(df)
+            },
+            'outliers': outlier_stats,
+            'data_shape': {
+                'original_rows': len(original_df),
+                'cleaned_rows': len(df),
+                'columns': len(df.columns)
+            }
+        }
+        
+        return jsonify({
+            'message': '数据清洗完成',
+            'cleaned_filename': cleaned_filename,
+            'original_rows': len(original_df),
+            'cleaned_rows': len(df),
+            'cleaning_report': report
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     try:
         print("正在启动服务器...")
