@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据分析系统 - 控制面板</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logout-button {
+            background-color: transparent;
+            border: 1px solid white;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .logout-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .main-content {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #4CAF50;
+        }
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .data-preview {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f8f8;
+            font-weight: 600;
+        }
+        .error-message {
+            color: #f44336;
+            margin-top: 1rem;
+        }
+        .success-message {
+            color: #4CAF50;
+            margin-top: 1rem;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .loading::after {
+            content: "...";
+            animation: dots 1s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60% { content: "..."; }
+            80% { content: "...."; }
+            100% { content: "....."; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>数据分析系统</h1>
+        <div class="user-info">
+            <span id="username"></span>
+            <button class="logout-button" onclick="logout()">退出登录</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="card">
+            <h2>数据上传</h2>
+            <div class="upload-area" id="uploadArea">
+                <p>点击或拖拽文件到此处上传</p>
+                <p>支持 .csv 和 .xlsx 格式</p>
+                <input type="file" id="fileInput" style="display: none" accept=".csv,.xlsx">
+            </div>
+            <div id="loading" class="loading">正在处理数据</div>
+            <div id="errorMessage" class="error-message"></div>
+            <div id="successMessage" class="success-message"></div>
+        </div>
+
+        <div class="card">
+            <h2>数据预览</h2>
+            <div class="data-preview">
+                <div id="previewContent"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>数据分析</h2>
+            <div id="analysisOptions" style="display: none;">
+                <button class="button" onclick="performAnalysis('kmeans')">聚类分析</button>
+                <button class="button" onclick="visualizeData()">数据可视化</button>
+                <button class="button" onclick="cleanData()">数据清洗</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 检查登录状态
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            // 验证token
+            fetch('/check-session', {
+                headers: {
+                    'Authorization': token
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.valid) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                } else {
+                    document.getElementById('username').textContent = data.user.username;
+                }
+            })
+            .catch(() => {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            });
+        }
+
+        // 退出登录
+        function logout() {
+            const token = localStorage.getItem('token');
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': token
+                }
+            })
+            .then(() => {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            })
+            .catch(console.error);
+        }
+
+        // 文件上传处理
+        let currentFile = null;
+
+        document.getElementById('uploadArea').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('uploadArea').addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        document.getElementById('uploadArea').addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                handleFile(files[0]);
+            }
+        });
+
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (files.length) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            const token = localStorage.getItem('token');
+            const formData = new FormData();
+            formData.append('file', file);
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('errorMessage').textContent = '';
+            document.getElementById('successMessage').textContent = '';
+
+            fetch('/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': token
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                currentFile = file.name;
+                document.getElementById('successMessage').textContent = '文件上传成功';
+                document.getElementById('analysisOptions').style.display = 'block';
+                displayPreview(data);
+            })
+            .catch(error => {
+                document.getElementById('errorMessage').textContent = error.message;
+            })
+            .finally(() => {
+                document.getElementById('loading').style.display = 'none';
+            });
+        }
+
+        function displayPreview(data) {
+            const previewContent = document.getElementById('previewContent');
+            if (!data.columns || !data.rows) {
+                previewContent.innerHTML = '<p>无数据可预览</p>';
+                return;
+            }
+
+            let table = '<table><thead><tr>';
+            data.columns.forEach(column => {
+                table += `<th>${column}</th>`;
+            });
+            table += '</tr></thead><tbody>';
+
+            data.rows.forEach(row => {
+                table += '<tr>';
+                row.forEach(cell => {
+                    table += `<td>${cell !== null ? cell : ''}</td>`;
+                });
+                table += '</tr>';
+            });
+
+            table += '</tbody></table>';
+            previewContent.innerHTML = table;
+        }
+
+        // 数据分析功能
+        function performAnalysis(type) {
+            if (!currentFile) return;
+
+            const token = localStorage.getItem('token');
+            fetch('/analyze', {
+                method: 'POST',
+                headers: {
+                    'Authorization': token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    filename: currentFile,
+                    analysis_type: type
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                // 处理分析结果
+                console.log('Analysis results:', data);
+            })
+            .catch(error => {
+                document.getElementById('errorMessage').textContent = error.message;
+            });
+        }
+
+        // 数据可视化
+        function visualizeData() {
+            // 实现数据可视化逻辑
+        }
+
+        // 数据清洗
+        function cleanData() {
+            // 实现数据清洗逻辑
+        }
+
+        // 页面加载时检查登录状态
+        window.addEventListener('load', checkAuth);
+    </script>
+</body>
+</html> 
