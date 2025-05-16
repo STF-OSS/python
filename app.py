@@ -709,7 +709,72 @@ def clean_data():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+# 记录用户操作的函数
+def log_user_action(username, user_id, action, filename=None, details=None, status='success'):
+    """记录用户操作到历史记录表"""
+    try:
+        # 获取客户端信息
+        ip_address = request.remote_addr if request else "unknown"
+        user_agent = request.headers.get('User-Agent', '') if request else "unknown"
+        
+        # 检查参数有效性，避免数据库错误
+        if username is None:
+            username = "unknown"
+        
+        # If user_id is 0 (often used for system) or username is 'system', set user_id to None for DB
+        actual_user_id = None if user_id == 0 or username == "system" else user_id
 
+        # 确保文本字段不会过长
+        if details and len(details) > 10000:  # 避免超大文本
+            details = details[:10000] + "... (已截断)"
+            
+        history_entry = History(
+            username=str(username)[:80],
+            user_id=actual_user_id, # Use actual_user_id
+            action=str(action)[:120] if action else "未知操作",
+            filename=str(filename)[:120] if filename else None,
+            action_details=details,
+            ip_address=str(ip_address)[:45],
+            user_agent=str(user_agent)[:255],
+            status=str(status)[:20]
+        )
+        
+        db.session.add(history_entry)
+        db.session.commit()
+        
+        return True
+    except Exception as e:
+        print(f"Error logging action '{action}' for user '{username}': {e}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return False
+
+def initialize_database():
+    """初始化数据库和创建超级管理员账户"""
+    with app.app_context():
+        try:
+            # 检查数据库表是否存在
+            inspector = db.inspect(db.engine)
+            if not inspector.has_table("user"):
+                print("创建数据库表...")
+                db.create_all()
+                print("数据表创建成功")
+                
+                # 只在表不存在时创建超级管理员
+                create_superadmin()
+            else:
+                print("数据库表已存在，跳过创建")
+            
+            print('数据库初始化完成')
+        except Exception as e:
+            print(f"数据库初始化失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise e
+
+# 在应用启动时初始化数据库
+initialize_database()
 if __name__ == '__main__':
     try:
         print("正在启动服务器...")
